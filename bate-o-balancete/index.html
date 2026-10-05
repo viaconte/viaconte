@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bate o Balancete</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --card: #ffffff; --ink: #1d2a36; --muted: #6b7a88;
+    --accent: #0b7a5a; --accent-soft: #d8f1e8; --danger: #c0392b; --tile: #eef2f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #11171d; --card: #1a232c; --ink: #e8eef3; --muted: #93a3b1;
+      --accent: #3ccf9b; --accent-soft: #1d3a31; --danger: #ff6b5b; --tile: #243039;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; justify-content: center; padding: 16px;
+  }
+  main { width: 100%; max-width: 440px; }
+  h1 { font-size: 1.5rem; margin: 8px 0 4px; }
+  p.sub { margin: 0 0 16px; color: var(--muted); font-size: .95rem; }
+  .hud { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+  .stat { background: var(--card); border-radius: 12px; padding: 10px; text-align: center; }
+  .stat small { display: block; color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; }
+  .stat b { font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+  .target { background: var(--accent); color: #fff; }
+  .target small { color: rgba(255,255,255,.8); }
+  .sumbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; color: var(--muted); font-size: .95rem; }
+  .sumbar b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .timebar { height: 6px; background: var(--tile); border-radius: 3px; overflow: hidden; margin-bottom: 12px; }
+  .timebar div { height: 100%; background: var(--accent); width: 100%; transition: width .2s linear; }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .grid.shake { animation: shake .3s; }
+  @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  button.tile {
+    aspect-ratio: 1; border: 2px solid transparent; border-radius: 12px;
+    background: var(--tile); color: var(--ink); font-size: 1.5rem; font-weight: 700;
+    cursor: pointer; transition: transform .1s, background .15s;
+  }
+  button.tile:active { transform: scale(.94); }
+  button.tile.sel { background: var(--accent-soft); border-color: var(--accent); }
+  button.tile.pop { animation: pop .35s; }
+  @keyframes pop { 0% { transform: scale(.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  .overlay {
+    margin-top: 16px; background: var(--card); border-radius: 14px; padding: 18px; text-align: center;
+  }
+  .overlay h2 { margin: 0 0 6px; font-size: 1.2rem; }
+  .overlay p { margin: 0 0 14px; color: var(--muted); }
+  .btn {
+    background: var(--accent); color: #fff; border: 0; border-radius: 10px;
+    padding: 12px 22px; font-size: 1rem; font-weight: 600; cursor: pointer;
+  }
+  .msg { min-height: 1.3em; text-align: center; margin-top: 10px; font-weight: 600; }
+  .msg.ok { color: var(--accent); } .msg.bad { color: var(--danger); }
+</style>
+</head>
+<body>
+<main>
+  <h1>🧮 Bate o Balancete</h1>
+  <p class="sub">Toque nos números até a soma fechar exatamente o valor-alvo. Cada acerto dá pontos e +2 segundos.</p>
+
+  <div class="hud">
+    <div class="stat target"><small>Alvo</small><b id="target">–</b></div>
+    <div class="stat"><small>Pontos</small><b id="score">0</b></div>
+    <div class="stat"><small>Recorde</small><b id="best">0</b></div>
+  </div>
+  <div class="timebar"><div id="timefill"></div></div>
+  <div class="sumbar"><span>Soma atual: <b id="sum">0</b></span><span><b id="time">60</b>s</span></div>
+
+  <div class="grid" id="grid"></div>
+  <div class="msg" id="msg"></div>
+
+  <div class="overlay" id="overlay">
+    <h2 id="ovTitle">Pronto para fechar as contas?</h2>
+    <p id="ovText">Você tem 60 segundos. Passou do alvo? A seleção zera.</p>
+    <button class="btn" id="start">Começar</button>
+  </div>
+</main>
+
+<script>
+(() => {
+  const COLS = 5, ROWS = 5, START_TIME = 60, BONUS = 2;
+  const $ = id => document.getElementById(id);
+  const gridEl = $('grid');
+  let tiles = [], selected = new Set(), target = 0, score = 0, timeLeft = 0, timer = null, playing = false;
+
+  const load = () => { try { return Number(localStorage.getItem('bb-best')) || 0; } catch { return 0; } };
+  const save = v => { try { localStorage.setItem('bb-best', String(v)); } catch {} };
+  let best = load();
+  $('best').textContent = best;
+
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+
+  function newTarget() {
+    // Alvo sempre possível: soma de 2 a 4 peças distintas do tabuleiro
+    const n = rnd(2, Math.min(4, 2 + Math.floor(score / 150)));
+    const idx = [...tiles.keys()].sort(() => Math.random() - .5).slice(0, n);
+    target = idx.reduce((s, i) => s + tiles[i], 0);
+    $('target').textContent = target;
+  }
+
+  function render(popped = []) {
+    gridEl.innerHTML = '';
+    tiles.forEach((v, i) => {
+      const b = document.createElement('button');
+      b.className = 'tile' + (selected.has(i) ? ' sel' : '') + (popped.includes(i) ? ' pop' : '');
+      b.textContent = v;
+      b.setAttribute('aria-pressed', selected.has(i));
+      b.onclick = () => tap(i);
+      gridEl.appendChild(b);
+    });
+    $('sum').textContent = currentSum();
+  }
+
+  const currentSum = () => [...selected].reduce((s, i) => s + tiles[i], 0);
+
+  function flash(text, cls) {
+    const m = $('msg'); m.textContent = text; m.className = 'msg ' + cls;
+    clearTimeout(flash.t); flash.t = setTimeout(() => { m.textContent = ''; }, 900);
+  }
+
+  function tap(i) {
+    if (!playing) return;
+    selected.has(i) ? selected.delete(i) : selected.add(i);
+    const s = currentSum();
+    if (s === target) {
+      const cleared = [...selected];
+      const pts = cleared.length * 10 + (cleared.length >= 4 ? 20 : 0);
+      score += pts; timeLeft += BONUS;
+      cleared.forEach(k => tiles[k] = rnd(1, 9));
+      selected.clear();
+      $('score').textContent = score;
+      flash(`Fechou! +${pts}`, 'ok');
+      newTarget(); render(cleared); updateTime();
+    } else if (s > target) {
+      selected.clear();
+      gridEl.classList.remove('shake'); void gridEl.offsetWidth; gridEl.classList.add('shake');
+      flash('Estourou o alvo!', 'bad');
+      render();
+    } else {
+      render();
+    }
+  }
+
+  function updateTime() {
+    $('time').textContent = timeLeft;
+    $('timefill').style.width = Math.min(100, timeLeft / START_TIME * 100) + '%';
+  }
+
+  function start() {
+    tiles = Array.from({ length: COLS * ROWS }, () => rnd(1, 9));
+    selected.clear(); score = 0; timeLeft = START_TIME; playing = true;
+    $('score').textContent = 0; $('overlay').hidden = true;
+    newTarget(); render(); updateTime();
+    clearInterval(timer);
+    timer = setInterval(() => {
+      timeLeft--; updateTime();
+      if (timeLeft <= 0) end();
+    }, 1000);
+  }
+
+  function end() {
+    clearInterval(timer); playing = false; selected.clear(); render();
+    const record = score > best;
+    if (record) { best = score; save(best); $('best').textContent = best; }
+    $('ovTitle').textContent = record ? '🏆 Novo recorde!' : 'Tempo esgotado!';
+    $('ovText').textContent = `Você fez ${score} pontos.`;
+    $('start').textContent = 'Jogar de novo';
+    $('overlay').hidden = false;
+  }
+
+  $('start').onclick = start;
+  tiles = Array.from({ length: COLS * ROWS }, () => rnd(1, 9));
+  render();
+})();
+</script>
+</body>
+</html>
