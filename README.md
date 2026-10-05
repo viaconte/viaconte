@@ -1,9 +1,7 @@
 ### Hi there 👋
-[viaconte.com.br](http://viaconte.com.br/)
-
-[Instagram](https://www.instagram.com/viaconte.contabilidade/)
-
-[Facebook](https://www.facebook.com/olsgestaocontabil)
+- 🌐 Site: [viaconte.com.br](http://viaconte.com.br/)
+- 📷 Instagram: [@viaconte.contabilidade](https://www.instagram.com/viaconte.contabilidade/)
+- 📘 Facebook: [olsgestaocontabil](https://www.facebook.com/olsgestaocontabil)
 
 <!--
 **viaconte/viaconte** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
