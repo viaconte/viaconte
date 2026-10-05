@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Consulta NCM · Reforma Tributária</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="conteudo">
+      <h1>Consulta NCM <span>Reforma Tributária</span></h1>
+      <p>Digite a NCM para ver o CST e o cClassTrib do IBS/CBS (LC 214/2025).</p>
+    </div>
+  </header>
+
+  <main class="conteudo">
+    <form id="form" class="busca" autocomplete="off">
+      <label class="campo campo-ncm">
+        <span>NCM</span>
+        <input id="ncm" name="ncm" inputmode="numeric" placeholder="0000.00.00" maxlength="10" autofocus>
+      </label>
+      <label class="campo">
+        <span>Data do fato gerador</span>
+        <input id="data" name="data" type="date">
+      </label>
+      <button type="submit">Consultar</button>
+    </form>
+
+    <section id="resultado" aria-live="polite"></section>
+
+    <footer class="rodape">
+      <p id="fonte"></p>
+      <p>Resultado indicativo: o enquadramento final depende da operação, do destinatário e da descrição do
+        produto nos anexos da LC 214/2025. Confirme com a legislação antes de emitir o documento fiscal.</p>
+    </footer>
+  </main>
+
+  <script src="data/base.js"></script>
+  <script src="lookup.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

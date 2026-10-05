@@ -1,0 +1,8 @@
+{
+  "name": "consulta-ncm-reforma",
+  "private": true,
+  "description": "Consulta de CST e cClassTrib (IBS/CBS) por NCM, conforme a LC 214/2025",
+  "scripts": {
+    "test": "node --test"
+  }
+}
